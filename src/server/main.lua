@@ -6,15 +6,17 @@ local job_counts  = {}
 
 local getSlotMax = function(playerId)
   if type(playerId) == 'string' then 
-    return Config.defaultSlotMax
+    return Config.regularSlots
   end
 
   local myRoles = exports['Badger_Discord_API']:GetDiscordRoles(playerId)
-  local myMax = Config.defaultSlotMax
+  print(json.encode(myRoles, {indent = true}))
+  local myMax = Config.regularSlots
   for cfgRole,roleData in pairs(Config.roles) do
     for _, myRole in ipairs(myRoles) do
-      if myRole == roleData.discordId then
-        myMax = roleData.maxSlots or myMax
+      if tostring(myRole) == tostring(roleData.discordId) then
+        print('Fouuund extra slots', roleData.slots)
+        myMax = roleData.slots or myMax
       end
     end
   end
@@ -53,7 +55,7 @@ local addJob = function(player_id, job_name, job_rank)
   end 
 
   if not player_data[player_id] then player_data[player_id] = {} end
-  if player_data[player_id][job_name] and player_data[player_id][job_name] == job_rank then return false, print('Player already has this job'); end
+  if player_data[player_id][job_name] and player_data[player_id][job_name] == job_rank then return false end
   player_data[player_id][job_name] = job_rank
   saveAll()
 end
@@ -95,7 +97,10 @@ local getPlayersWithJob = function(job_name)
   local players = {}
   for k,v in pairs(player_data) do 
     if v[job_name] then 
-      table.insert(players, k)
+      table.insert(players, {
+        citizen_id = k, 
+        rank       = v[job_name]
+      })
     end
   end
   return players
@@ -117,36 +122,25 @@ AddEventHandler('playerDropped', function(source, reason)
   removeFromOldJob(source)
 end)
 
----\\ Conversion from PS-UI
-RegisterNetEvent('dirk_multijob:player_login', function()
-  local src = source 
-  local cid = Core.Player.Id(src)
-  local current_job = Core.Player.GetJob(src)
-  
-  if player_data[cid] then return false; end
+onReady(function()
+  player_data = Core.Files.Load('multi_jobs.json') or {}
 
   if Config.convertFromPS then 
-    local old_jobs = MySQL.query.await("SELECT jobdata FROM multijobs WHERE citizenid = ?", {cid})
-    if not old_jobs then return false; end
-    --  FORMAT TO NEW STYLE 
-    local new_format = {}
-    for k,v in pairs(old_jobs) do 
-      new_format[k] = v
-    end
+    local old_jobs = MySQL.query.await("SELECT citizenid, jobdata FROM multijobs", {})
 
-  else
-    player_data[cid] = {}
-    player_data[cid][current_job.name] = current_job.rank
+    for _,result in pairs(old_jobs) do 
+      local cid = result.citizenid
+      if not player_data[cid] then 
+        player_data[cid] = json.decode(result.jobdata) or {}
+      end
+    end
+    print(json.encode(player_data, {indent = true}))
+    print('CONVERTED THE PLAYERS JOBS FROM ABOVE, PROBABLY TUURN OFF THE convertFromPS setting in the config now...')
+    saveAll()
   end
 
 
-  --\\ Get all jobs from old PS-UI table
-  print('Converted Multi Jobs', json.encode(player_data[cid], {indent = true}))
-end)
 
-onReady(function()
-  player_data = Core.Files.Load('multi_jobs.json') or {}
-  print('Loaded Multi Jobs', player_data)
   Core.Callback('dirk_multijob:getJobs', function(src, cb, current_job)
     local player_jobs = player_data[Core.Player.Id(src)] or {}
     local jobs = {}
@@ -163,8 +157,10 @@ onReady(function()
         active = getJobPlayerCount(current_job)
       }
     end
+    local max_slots = getSlotMax(src)
 
-    cb(jobs, getSlotMax(src))
+    print('Max slots ', max_slots)
+    cb(jobs, max_slots)
   end)
 end)
 

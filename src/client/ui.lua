@@ -26,6 +26,7 @@ openMenu = function()
   end
   local current_job = Core.Player.GetJob()
   local my_jobs, max_jobs = Core.SyncCallback('dirk_multijob:getJobs', current_job.name)
+  print('#MAX SLOT ', max_jobs)
   local job_display = {}
 
   if not my_jobs[current_job.name] then 
@@ -119,7 +120,7 @@ end, false)
 
 
 
-RegisterKeyMapping('jobmenu', 'Open Job Menu', 'keyboard', 'F6')
+RegisterKeyMapping('jobmenu', 'Open Job Menu', 'keyboard', 'J')
 
 
 

@@ -6,7 +6,8 @@ import { useHover } from '@mantine/hooks';
 import React, { useState } from "react";
 import { useNuiEvent } from "../../hooks/useNuiEvent";
 import { fetchNui } from "../../utils/fetchNui";
-
+import { internalEvent } from "../../utils/internalEvent";
+import './scroll.module.css';
 
 
 type JobProps = {
@@ -93,6 +94,7 @@ function InfoBox({label, value, icon, selected}: InfoBoxProps) {
   return (
     <Box 
       flex={0.33}
+      w='33%'
       p='xs'
       bg={'rgba(55,55,55,0.6)'}
       style={{
@@ -106,13 +108,18 @@ function InfoBox({label, value, icon, selected}: InfoBoxProps) {
     >
       <FontAwesomeIcon icon={icon} size='sm' color='white' />
       <Flex 
+        w='100%'
         direction='column'
         justify='center'
         align='center'
         p='xs'
       >
         <Title order={6}>{label}</Title>
-        <Text>{value}</Text>
+        <Text 
+          style={{
+            textWrap: 'pretty',
+          }}
+        >{value}</Text>
       </Flex>
 
     </Box>
@@ -121,7 +128,7 @@ function InfoBox({label, value, icon, selected}: InfoBoxProps) {
 
 
 function JobBox ({job, number, maxSlots, jobs, setMyJobs}: JobBoxProps) {
-  const blurred = number + 1 > maxSlots;
+  const blurred = number + 1 > maxSlots && !job.selected && job.name !== 'unemployed';
   return (
     <Box 
       bg={alpha('dark.9', 0.5) }  
@@ -280,7 +287,9 @@ function MyJobs({jobs, setMyJobs, mainOpened, maxSlots}: MyJobsProps) {
       <Box 
         opacity={opened && mainOpened ? 1 : 0 } 
         bg={alpha('dark.9', 0.8)}
-        h='auto'  
+        h='auto'
+
+  
         w='25rem'
         p='sm'
          
@@ -290,14 +299,34 @@ function MyJobs({jobs, setMyJobs, mainOpened, maxSlots}: MyJobsProps) {
         style={{
           borderRadius: 'var(--mantine-radius-sm)',
           transition: 'all ease-in-out 0.2s',
+
+   
         }}  
       >
         
-          <Title order={3} ta={'center'}>My Jobs</Title>
+          <Flex direction='row' align='center'>
+            <Title order={3} ta={'center'}>My Jobs</Title>
+            <Flex
+              direction='row'
+              align='center'
+              ml='auto' gap='xs'
+            >
+              <Text size='xs' c='lightgrey'>SLOTS</Text>
+              <Text fw='bold'>{Object.keys(jobs).length}/{maxSlots}</Text>
+            </Flex>
+          </Flex>
           <Flex 
+
+
+            p='xs'
             direction='column'
-            
+            style={{
+              overflowX: 'hidden',
+              overflowY: 'auto',
+            }}
             gap='sm'
+            h='80vh'
+        
           >
             {Object.keys(jobs).map((job, index) => {
               return (
@@ -431,39 +460,65 @@ export default function JobBar() {
 }
 
 
-// internalEvent([
-//   {
-//     module: 'JobBar',
-//     action: 'JOB_BAR_STATE', 
-//     data: {
-//       action: 'OPEN', 
-//       my_jobs: {
-//         police: {
-//           label : 'Police',
-//           name: 'police',
-//           rank: 1, 
-//           rank_label: 'Cadet',
-//           duty: false,
-//           active: 0,
-//           salary: 0,
-//           selected:true,
-//         },
+internalEvent([
+  {
+    module: 'JobBar',
+    action: 'JOB_BAR_STATE', 
+    data: {
+      action: 'OPEN', 
+      max_slots: 2,
+      my_jobs: {
+        police: {
+          label : 'Police',
+          name: 'police',
+          rank: 1, 
+          rank_label: 'Cadet',
+          duty: false,
+          active: 0,
+          salary: 0,
+          selected:true,
+        },
 
-//         unemployed: {
-//           label : 'unemployed',
-//           name: 'unemployed',
-//           rank: 0, 
-//           rank_label: 'Bum',
-//           duty: false,
-//           active: 0,
-//           salary: 0,
-//           selected:false,
-//         }
+        unemployed: {
+          label : 'Freelancer',
+          name: 'unemployed',
+          rank: 0, 
+          rank_label: 'Freelancer',
+          duty: false,
+          active: 0,
+          salary: 0,
+          selected:false,
+        },
+    
 
-//       }
-//     }
-//   }
-// ])
+        ambulance: {
+          label : 'Ambulance',
+          name: 'ambulance',
+          rank: 1, 
+          rank_label: 'Cadet',
+          duty: false,
+          active: 0,
+          salary: 0,
+          selected:false,
+        },
+
+        john: {
+          label : 'John',
+          name: 'john',
+          rank: 1, 
+          rank_label: 'Cadet',
+          duty: false,
+          active: 0,
+          salary: 0,
+          selected:false,
+        },
+
+      },
+
+
+    }
+  }
+])
 
 // setTimeout(() => {
 //   internalEvent([
