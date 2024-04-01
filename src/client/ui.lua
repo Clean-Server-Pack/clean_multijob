@@ -4,7 +4,8 @@ onReady(function()
   if not Settings.Framework then Core, Settings = exports['dirk-core']:getCore(); end
   if Settings.Framework == 'qb-core' then 
     local QBCore = exports['qb-core']:GetCoreObject()
-    job_info = QBCore.Shared.Jobs
+    job_info = Core.deepCloneTable(QBCore.Shared.Jobs)
+    QBCore = nil 
   end
 end)
 
