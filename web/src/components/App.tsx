@@ -4,6 +4,10 @@ import "./App.css";
 import JobBar from "./JobBar/main";
 
 const App: React.FC = () => {
+
+
+
+  console.log('App.tsx')
   return (
     <JobBar />
   );

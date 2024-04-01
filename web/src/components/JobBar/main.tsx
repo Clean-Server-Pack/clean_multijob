@@ -1,12 +1,11 @@
 
-import {Box, Center, Image, Title, Text, alpha, Flex, Button, Group} from '@mantine/core';
+import { Box, Button, Flex, Text, Title, alpha } from '@mantine/core';
 
-import {useHover} from '@mantine/hooks';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useHover } from '@mantine/hooks';
 import React, { useState } from "react";
 import { useNuiEvent } from "../../hooks/useNuiEvent";
 import { fetchNui } from "../../utils/fetchNui";
-import { internalEvent } from '../../utils/internalEvent';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 
 
@@ -24,12 +23,16 @@ type JobProps = {
 }
 
 type MyJobsProps = {
+  maxSlots: number,
+  mainOpened: boolean,
   jobs: JobProps,
   setMyJobs: React.Dispatch<React.SetStateAction<JobProps>>
 }
 
 
 type JobBoxProps = {
+  maxSlots: number,
+  number: number,
   job: {
     name: string,
     label: string,
@@ -79,16 +82,22 @@ function HoverIcon({style, icon, color, hoverColor, onClick}: HoverIconProps) {
 type InfoBoxProps = {
   label: string,
   value: string | number,
-  icon: string  
+  icon: string , 
+  selected: boolean,
+
+
+
 }
 
-function InfoBoxProps({label, value, icon}: InfoBoxProps) {
+function InfoBox({label, value, icon, selected}: InfoBoxProps) {
   return (
     <Box 
       flex={0.33}
-      bg={alpha('var(--mantine-primary-color-9)', 0.9)}
+      p='xs'
+      bg={'rgba(55,55,55,0.6)'}
       style={{
-        borderRadius: 'var(--mantine-radius-xs)',
+        border: selected ? '2px solid var(--mantine-primary-color-9)' : '2px solid rgba(55,55,55,0.6)',
+        borderRadius: 'var(--mantine-radius-sm)',
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'center',
@@ -111,13 +120,18 @@ function InfoBoxProps({label, value, icon}: InfoBoxProps) {
 }
 
 
-function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
+function JobBox ({job, number, maxSlots, jobs, setMyJobs}: JobBoxProps) {
+  const blurred = number + 1 > maxSlots;
   return (
     <Box 
       bg={alpha('dark.9', 0.5) }  
+
+
       p='sm'
       style={{
-        border:job.selected ? '2px solid var(--mantine-primary-color-9)' : '2px solid transparent',
+        userSelect: blurred ? 'none' : 'auto',
+        filter: blurred ? 'blur(2px)' : 'none',
+        border:job.selected ? '2px solid var(--mantine-primary-color-9)' : '2px solid rgba(55,55,55,0.6)',
         borderRadius: 'var(--mantine-radius-sm)',
         transition: 'all ease-in-out 0.2s',
         display: 'flex',
@@ -136,16 +150,23 @@ function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
         {(job.name !== 'unemployed') && 
           <HoverIcon icon='dumpster' hoverColor='rgba(255,0,0,0.8)' color='white' 
             onClick={() => {
+              if (blurred) return;
               const new_jobs = {...jobs};
-              delete new_jobs[job.label.toLowerCase()];
+              delete new_jobs[job.name];
      
 
               fetchNui('JOB_DELETE', {
-                job: job.label.toLowerCase()
+                job: job.name
               })
 
               // Set to unemployed 
               new_jobs['unemployed'].selected = true;
+
+
+              
+
+              // add count to unemployed 
+              new_jobs['unemployed'].active = new_jobs['unemployed'].active + 1;
 
               setMyJobs(new_jobs);
 
@@ -160,9 +181,9 @@ function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
       </Flex>
 
       <Flex dir='row' w='100%'  gap='sm' justify='center' p='xs'>
-        <InfoBoxProps label='Rank' value={job.rank_label} icon='star' />
-        <InfoBoxProps label='Salary' value={job.salary} icon='money-bill-wave' />
-        <InfoBoxProps label='Active' value={job.active} icon='user' />
+        <InfoBox label='Rank' value={job.rank_label} icon='star' selected={job.selected} />
+        <InfoBox label='Salary' value={job.salary} icon='money-bill-wave' selected={job.selected} />
+        <InfoBox label='Active' value={job.active} icon='user' selected={job.selected} />
       </Flex>
 
   
@@ -171,14 +192,16 @@ function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
             <Button variant={job.duty? 'light' : 'light'} color={
               job.duty ? 'red' : 'var(--mantine-primary-color-9)'
             } onClick={() => {
+              if (blurred) return;
+
               const new_jobs = {...jobs};
-              new_jobs[job.label.toLowerCase()].duty = !new_jobs[job.label.toLowerCase()].duty;
+              new_jobs[job.name].duty = !new_jobs[job.name].duty;
               setMyJobs(new_jobs);
 
 
               fetchNui('JOB_DUTY', {
-                job: job.label.toLowerCase(),
-                duty: new_jobs[job.label.toLowerCase()].duty
+                job: job.name,
+                duty: new_jobs[job.name].duty
               })
 
             }}>
@@ -186,22 +209,40 @@ function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
             </Button>
           }
           <Button variant={job.selected ? 'filled' : 'light'} color='var(--mantine-primary-color-9)' onClick={() => {
-              const new_jobs = {...jobs};
-              new_jobs[job.label.toLowerCase()].selected = !new_jobs[job.label.toLowerCase()].selected;
-              // Also Set off duty if selected is false
-              if (!new_jobs[job.label.toLowerCase()].selected) {
-                new_jobs[job.label.toLowerCase()].duty = false;
+              if (blurred) return;
+              const old_job = Object.keys(jobs).find((key) => jobs[key].selected);
+              // If we are selecting a new job or deeselecting the current job then we need to set the active of the old job - 1
+              if (old_job && old_job !== job.name) {
+                const new_jobs = {...jobs};
+                new_jobs[old_job].active = new_jobs[old_job].active - 1;
+                setMyJobs(new_jobs);
               }
+
+              // If we are selecting a new job then we need to set the active of the new job + 1
+              if (old_job !== job.name) {
+                const new_jobs = {...jobs};
+                new_jobs[job.name].active = new_jobs[job.name].active + 1;
+                setMyJobs(new_jobs);
+              }
+
+              const new_jobs = {...jobs};
+              new_jobs[job.name].selected = !new_jobs[job.name].selected;
+              // Also Set off duty if selected is false
+              if (!new_jobs[job.name].selected) {
+                new_jobs[job.name].duty = false;
+              }
+
+
       
               // Deselect any other jobs 
               Object.keys(new_jobs).map((key) => {
-                if (key !== job.label.toLowerCase()) {
+                if (key !== job.name) {
                   new_jobs[key].selected = false;
                 }
               })
 
               // If deselecting then set to unemployed
-              if (!new_jobs[job.label.toLowerCase()].selected) {
+              if (!new_jobs[job.name].selected) {
                 new_jobs['unemployed'].selected = true;
               }
 
@@ -210,8 +251,8 @@ function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
 
               // If they are selecting the job it sets to the job if deselecting it sets them back to a civ
               fetchNui('JOB_SELECT', {
-                job: job.label.toLowerCase(),
-                selected: new_jobs[job.label.toLowerCase()].selected
+                job: job.name,
+                selected: new_jobs[job.name].selected
               })
             }}>
             {job.selected ? 'Deselect' : 'Select'}
@@ -228,7 +269,7 @@ function JobBox ({job, jobs, setMyJobs}: JobBoxProps) {
   )
 }
 
-function MyJobs({jobs, setMyJobs}: MyJobsProps) {
+function MyJobs({jobs, setMyJobs, mainOpened, maxSlots}: MyJobsProps) {
   const {hovered, ref } = useHover();
   const [ opened, setOpened ] = useState(false);
 
@@ -237,7 +278,7 @@ function MyJobs({jobs, setMyJobs}: MyJobsProps) {
     <>
 
       <Box 
-        opacity={opened ? 1 : 0 } 
+        opacity={opened && mainOpened ? 1 : 0 } 
         bg={alpha('dark.9', 0.8)}
         h='auto'  
         w='25rem'
@@ -260,7 +301,7 @@ function MyJobs({jobs, setMyJobs}: MyJobsProps) {
           >
             {Object.keys(jobs).map((job, index) => {
               return (
-                <JobBox key={index} job={jobs[job]} jobs={jobs} setMyJobs={setMyJobs} />
+                <JobBox key={index} number={index} job={jobs[job]} jobs={jobs} setMyJobs={setMyJobs} maxSlots={maxSlots} />
               )
             })}
           </Flex>
@@ -283,12 +324,8 @@ function MyJobs({jobs, setMyJobs}: MyJobsProps) {
           cursor: 'pointer',
           transition: 'all ease-in-out 0.1s',
         }}
-
-
-
-
-          onClick={() => setOpened(!opened)}
-        >
+        onClick={() => setOpened(!opened)}
+      >
         <FontAwesomeIcon icon='bars' size='2x' color='white' onClick={() => setOpened(!opened)} />
       </Box>
     
@@ -310,6 +347,7 @@ function MyJobs({jobs, setMyJobs}: MyJobsProps) {
 
 export default function JobBar() {
   const [ opened, setOpened ] = useState(false);
+  const [maxSlots , setMaxSlots] = useState(1);
   const [ my_jobs, setMyJobs ] = useState<JobProps>({
     unemployed: {
       name: 'unemployed',
@@ -320,15 +358,25 @@ export default function JobBar() {
       active: 0,
       salary: 0,
       selected:true, 
+    },
+    police : {
+      name: 'police',
+      label : 'Police',
+      rank: 1, 
+      rank_label: 'Cadet',
+      duty: false,
+      active: 0,
+      salary: 0,
+      selected:false, 
     }
   }); // { police: { label: 'Police', rank: 1, rank_label: 'Cadet', duty: false }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  useNuiEvent('JOB_BAR_STATE' , (module, data: any) => {
+  useNuiEvent('JOB_BAR_STATE' , (data: any) => {
     if (data.action === 'OPEN') {
       setOpened(true);
       setMyJobs(data.my_jobs);
-
+      setMaxSlots(data.max_slots);
     }
     if (data.action === 'CLOSE') {
       setOpened(false);
@@ -338,23 +386,24 @@ export default function JobBar() {
 
   // Listen for escape key 
   React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key == ' F6') {
         if (opened){
-          setOpened(false)
-          fetchNui('LOSE_FOCUS', {})
+          setTimeout(() => {
+            setOpened(false)
+            fetchNui('LOSE_FOCUS_JOB', {})
+          }, 50)
         }
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => window.removeEventListener('keyup', handleKeyUp);
   });
   
 
 
   return (
     <>
- 
       <Box
         pos='absolute'
         top='0'
@@ -364,10 +413,6 @@ export default function JobBar() {
         w='auto'
         p='sm'
         display='flex'
-        
-
-
-
 
         style={{ 
           transition: 'all ease-in-out 0.2s',
@@ -377,7 +422,7 @@ export default function JobBar() {
       
         }}
       >
-        <MyJobs jobs={my_jobs} setMyJobs={setMyJobs} />
+        <MyJobs jobs={my_jobs} setMyJobs={setMyJobs} mainOpened={opened} maxSlots={maxSlots} />
 
       </Box>
 
@@ -405,7 +450,7 @@ export default function JobBar() {
 //         },
 
 //         unemployed: {
-//           label : 'Unemployed',
+//           label : 'unemployed',
 //           name: 'unemployed',
 //           rank: 0, 
 //           rank_label: 'Bum',
