@@ -76,12 +76,31 @@ openMenu = function()
     while in_menu do 
       Wait(0)
       --\ Disable mouse movement 
-      DisableControlAction(0, 1, true)
-      DisableControlAction(0, 2, true)
-      DisableControlAction(0, 142, true)
-      DisableControlAction(0, 106, true)
-      DisableControlAction(0, 200, true)
-      DisableControlAction(0, 202, true)
+      CreateThread(function()
+        while in_menu do 
+          Wait(0)
+          --\ Disable mouse movement 
+          DisableControlAction(0, 1, true)
+          DisableControlAction(0, 2, true)
+    
+          -- SHOOTING/PUNCH ETC 
+          DisableControlAction(0,18, true)
+          DisableControlAction(0,24, true)
+          DisableControlAction(0,69, true)
+          DisableControlAction(0, 92, true)
+          DisableControlAction(0, 106, true)
+          DisableControlAction(0, 122, true)
+          DisableControlAction(0, 235, true)
+          DisableControlAction(0, 142, true)
+          DisableControlAction(0, 176, true)
+          DisableControlAction(0, 223, true)
+          DisableControlAction(0, 229, true)
+          DisableControlAction(0, 237, true)
+          DisableControlAction(0, 257, true)
+          DisableControlAction(0, 329, true)
+          DisableControlAction(0, 346, true)
+        end
+      end)
 
     end
   end)
