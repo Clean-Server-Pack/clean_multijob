@@ -10,12 +10,10 @@ local getSlotMax = function(playerId)
   end
 
   local myRoles = exports['Badger_Discord_API']:GetDiscordRoles(playerId)
-  print(json.encode(myRoles, {indent = true}))
   local myMax = Config.regularSlots
   for cfgRole,roleData in pairs(Config.roles) do
     for _, myRole in ipairs(myRoles) do
       if tostring(myRole) == tostring(roleData.discordId) then
-        print('Fouuund extra slots', roleData.slots)
         myMax = roleData.slots or myMax
       end
     end
@@ -66,12 +64,12 @@ local removeJob = function(player_id, job_name)
   local src = false
   if type(player_id) == 'number' then 
     local is_online = Core.Player.Get(player_id)
-    if not is_online then return false, print('Player is not online'); end
+    if not is_online then return false, print('Player is not online please provide their citizenID instead'); end
     src = player_id
     player_id = Core.Player.Id(player_id)
   end 
 
-  if not player_data[player_id] then return false, print('Player does not have any jobs'); end
+  if not player_data[player_id] then player_data[player_id] = {} end
   player_data[player_id][job_name] = nil
   if src then 
     Core.Player.SetJob(src, Config.unemployed.jobName, 0)
@@ -158,8 +156,6 @@ onReady(function()
       }
     end
     local max_slots = getSlotMax(src)
-
-    print('Max slots ', max_slots)
     cb(jobs, max_slots)
   end)
 end)
@@ -179,7 +175,7 @@ RegisterNetEvent('dirk_multijob:quitJob', function(job_name)
   local src = source 
   removeJob(src, job_name)
 end)
-
+ 
 RegisterNetEvent('dirk_mutlijob:toggleDuty', function(job_name, state)
   local src = source 
   local cid = Core.Player.Id(src)
