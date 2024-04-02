@@ -3,7 +3,7 @@
 
 ## Similar Design Better Execution of a well known multijob script (all code is entirely my own)
  
-## Useage 
+## Usage 
 F6 Key is default to open can be changed via keybindings, automatically converts from old ps_ui style of storage, will also pickup setJobs adding these to your multijob menu 
 
 
