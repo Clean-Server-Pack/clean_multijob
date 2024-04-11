@@ -1,20 +1,39 @@
 
 local player_data = {}
 local job_counts  = {}
-
-
+local found_roles = {}
 
 local getSlotMax = function(playerId)
   if type(playerId) == 'string' then 
     return Config.regularSlots
   end
+  local now = os.time()
+  local myRoles =  {}
+  if found_roles[playerId] then 
+    local diff = now - found_roles[playerId].find_time
+    if diff >= 120 then 
+      
+      found_roles[playerId].roles = myRoles
+      found_roles[playerId].find_time = now
 
-  local myRoles = exports['Badger_Discord_API']:GetDiscordRoles(playerId)
+    else 
+      myRoles = found_roles[playerId].roles
+    end
+  else
+    myRoles = exports['Badger_Discord_API']:GetDiscordRoles(playerId)
+    found_roles[playerId] = {
+      find_time = now 
+      roles     = myRoles
+    }
+  end
+
   local myMax = Config.regularSlots
-  for cfgRole,roleData in pairs(Config.roles) do
-    for _, myRole in ipairs(myRoles) do
-      if tostring(myRole) == tostring(roleData.discordId) then
-        myMax = roleData.slots or myMax
+  if myRoles and type(myRoles) == 'table' then 
+    for cfgRole,roleData in pairs(Config.roles) do
+      for _, myRole in ipairs(myRoles) do
+        if tostring(myRole) == tostring(roleData.discordId) then
+          myMax = roleData.slots or myMax
+        end
       end
     end
   end
