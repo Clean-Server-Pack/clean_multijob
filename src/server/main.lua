@@ -22,7 +22,7 @@ local getSlotMax = function(playerId)
   else
     myRoles = exports['Badger_Discord_API']:GetDiscordRoles(playerId)
     found_roles[playerId] = {
-      find_time = now 
+      find_time = now,
       roles     = myRoles
     }
   end
