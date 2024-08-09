@@ -56,7 +56,7 @@ jobs:
         run: |
           mkdir -p ./temp/dirk_multijob
           mkdir -p ./temp/dirk_multijob/web/
-          cp ./{README.md,fxmanifest.lua,config.lua} ./temp/dirk_multijob
+          cp ./{readme.md,fxmanifest.lua,config.lua} ./temp/dirk_multijob
           cp -r ./src ./temp/dirk_multijob
           cp -r ./web/build ./temp/dirk_multijob/web/
           cd ./temp && zip -r ../dirk_multijob.zip ./dirk_multijob
