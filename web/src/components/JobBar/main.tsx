@@ -8,6 +8,7 @@ import { useNuiEvent } from "../../hooks/useNuiEvent";
 import { fetchNui } from "../../utils/fetchNui";
 import { internalEvent } from "../../utils/internalEvent";
 import './scroll.module.css';
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 
 type JobProps = {
@@ -75,8 +76,8 @@ function HoverIcon({style, icon, color, hoverColor, onClick}: HoverIconProps) {
       }}
       onClick={onClick}
     >
-      <FontAwesomeIcon icon={icon} size='lg' color={hovered ? hoverColor : color} />
-    </Box>
+      <FontAwesomeIcon icon={icon as IconProp} size='lg' color={hovered ? hoverColor : color} />
+    </Box> 
   )
 }
 
@@ -106,7 +107,7 @@ function InfoBox({label, value, icon, selected}: InfoBoxProps) {
         alignItems: 'center',
       }}
     >
-      <FontAwesomeIcon icon={icon} size='sm' color='white' />
+      <FontAwesomeIcon icon={icon as IconProp} size='sm' color='white' />
       <Flex 
         w='100%'
         direction='column'
