@@ -1,5 +1,5 @@
 Config = {
-  spamPrevention = 2, --\\ How many seconds between each menu open to stop spamming?
+  spamPrevention = 1, --\\ How many seconds between each menu open to stop spamming?
   unemployed = {
     jobName = 'unemployed',
     jobLabel = 'Unemployed',
