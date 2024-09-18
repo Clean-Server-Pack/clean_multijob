@@ -54,12 +54,12 @@ jobs:
           
       - name: Bundle files
         run: |
-          mkdir -p ./temp/dirk_multijob
-          mkdir -p ./temp/dirk_multijob/web/
-          cp ./{readme.md,fxmanifest.lua,config.lua} ./temp/dirk_multijob
-          cp -r ./src ./temp/dirk_multijob
-          cp -r ./web/build ./temp/dirk_multijob/web/
-          cd ./temp && zip -r ../dirk_multijob.zip ./dirk_multijob
+          mkdir -p ./temp/clean_multijob
+          mkdir -p ./temp/clean_multijob/web/
+          cp ./{readme.md,fxmanifest.lua,config.lua} ./temp/clean_multijob
+          cp -r ./src ./temp/clean_multijob
+          cp -r ./web/build ./temp/clean_multijob/web/
+          cd ./temp && zip -r ../clean_multijob.zip ./clean_multijob
 
       - name: Create Release
         uses: 'marvinpinto/action-automatic-releases@v1.2.1'
@@ -68,7 +68,7 @@ jobs:
           repo_token: '${{ secrets.GITHUB_TOKEN }}'
           title: 'Latest Build'
           prerelease: false
-          files: dirk_multijob.zip
+          files: clean_multijob.zip
           automatic_release_tag: 'latest_production'
 
         env:

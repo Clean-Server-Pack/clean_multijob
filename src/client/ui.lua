@@ -1,34 +1,57 @@
-local job_info = {}
+local Config = require 'config'
 
-onReady(function()
-  if not Settings.Framework then Core, Settings = exports['dirk-core']:getCore(); end
-  if Settings.Framework == 'qb-core' then 
-    local QBCore = exports['qb-core']:GetCoreObject()
-    job_info = Core.deepCloneTable(QBCore.Shared.Jobs)
-    QBCore = nil 
-  end
+
+lib.onCache('playerLoaded', function(loaded)
+  if not loaded then return; end
+  TriggerServerEvent('clean_multijob:playerJoined')
+end)
+
+lib.onCache('job', function(job)
+  print('NEW JOB', json.encode(job, {indent = true}))
+  TriggerServerEvent('clean_multijob:jobUpdate', {
+    name = job.name,
+    rank = job.grade,
+  })
+end)
+
+RegisterNuiCallback('GET_SETTINGS', function(data, cb)
+  cb({
+    primaryColor       = lib.settings.primaryColor,
+    primaryShade       = lib.settings.primaryShade,
+    enableTimeTracking = Config.enableTimeTracking,
+    jobCounts          = Config.jobCounts,
+    unemployedJob      = Config.unemployedJob,
+  })
 end)
 
 getJobInfo = function(job_name, job_rank)
-  local raw = job_info[job_name]
+  local raw = lib.FW.Shared.Jobs[job_name]
   return {
-    label = raw.label,
-    rank_label = raw.grades[tostring(job_rank)].name,
-    salary = raw.grades[tostring(job_rank)].payment,
+    label      = raw.label,
+    rank_label = raw.grades[tonumber(job_rank)].name,
+    isboss     = raw.grades[tonumber(job_rank)].isboss,
+    salary     = raw.grades[tonumber(job_rank)].payment,
   }
 end
 
 local in_menu = false 
 local last_call = GetGameTimer() - Config.spamPrevention * 1000
 openMenu = function()
+  print('OPEN MENU')
   if Config.spamPrevention then 
-    if GetGameTimer() - last_call < Config.spamPrevention * 1000 then return Core.UI.Notify('Stop spamming this menu you fucking geek!') end
+    if GetGameTimer() - last_call < Config.spamPrevention * 1000 then 
+      return lib.notify({
+        title = 'Job Menu', 
+        description = 'Stop spamming this menu you fucking geek!'
+      }) 
+    end
     last_call = GetGameTimer()
   end
-  local current_job = Core.Player.GetJob()
-  local my_jobs, max_jobs = Core.SyncCallback('dirk_multijob:getJobs', current_job.name)
-  print('#MAX SLOT ', max_jobs)
+  local current_job = cache.job
+  local my_jobs, max_jobs = lib.callback.await('clean_multijob:getJobs', current_job.name)
   local job_display = {}
+  print('cur job')
+  print(json.encode(current_job, {indent = true}))
 
   if not my_jobs[current_job.name] then 
     my_jobs[current_job.name] = {
@@ -36,64 +59,61 @@ openMenu = function()
       selected = true,
       label = current_job.label,
       active = current_job.active,
-      duty = current_job.duty,
+      duty = current_job.onduty,
     }
   end
 
+  local inserted = {}
   for k,v in pairs(my_jobs) do 
     local on_duty = current_job.name == k and current_job.duty or false
     local job_info = getJobInfo(k, v.rank)
-    job_display[k] = {
+    table.insert(inserted, k)
+    table.insert(job_display, {
       name  = k, 
       label = job_info.label or v.label, 
       rank  = v.rank,
+      isboss = job_info.isboss,
       selected = current_job.name == k,
       rank_label = job_info.rank_label,
-      duty = current_job.name == k and current_job.duty or false,
+      duty = current_job.name == k and current_job.onduty or false,
       active = v.active,
       salary = job_info.salary,
-    }
+    })
   end
 
 
-  job_display[Config.unemployed.jobName] = job_display[Config.unemployed.jobName] or {
-    name  = Config.unemployed.jobName, 
-    label = Config.unemployed.jobLabel, 
-    rank  = 0,
-    selected = current_job.name == Config.unemployed.jobName,
-    rank_label = Config.unemployed.rankLabel,
-    duty = false,
-    active = 0,
-    salary = 0,
-  }
+
+  if not lib.table.includes(inserted, Config.unemployedJob) then 
+    local job_info = getJobInfo(Config.unemployedJob, 0)
+    table.insert(job_display, {
+      name  = Config.unemployedJob, 
+      label = job_info.label, 
+      rank  = 0,
+      selected = current_job.name == Config.unemployedJob,
+      rank_label = job_info.rank_label,
+      duty = false,
+      active = 0,
+      salary = 0,
+    })
+  end
 
   SetNuiFocus(true, true)
-  SetNuiFocusKeepInput(true)
   in_menu = true
 
-
-
   SendNUIMessage({
-    module = 'JobBar',
-    action = 'JOB_BAR_STATE', 
+    action = 'OPEN_MENU', 
     data   = {
-      action  = 'OPEN', 
-      my_jobs = job_display,
-      max_slots = max_jobs,
+      jobs = job_display,
+      maxSlots = max_jobs,
     }
   })
 end
 
 local closeMenu = function()
-  SetNuiFocusKeepInput(true)
   SetNuiFocus(false, false)
   in_menu = false
   SendNUIMessage({
-    module = 'JobBar',
-    action = 'JOB_BAR_STATE', 
-    data   = {
-      action  = 'CLOSE', 
-    }
+    action = 'CLOSE_MENU', 
   })
 end
 
@@ -107,73 +127,97 @@ RegisterCommand('jobmenu', function()
 end, false)
 
 
-CreateThread(function()
-  while in_menu do 
-    Wait(0)
-    --\ Disable mouse movement 
-    CreateThread(function()
-      while in_menu do 
-        Wait(0)
-        --\ Disable mouse movement 
-        DisableControlAction(0, 1, true)
-        DisableControlAction(0, 2, true)
-  
-        -- SHOOTING/PUNCH ETC 
-        DisableControlAction(0,18, true)
-        DisableControlAction(0,24, true)
-        DisableControlAction(0,69, true)
-        DisableControlAction(0, 92, true)
-        DisableControlAction(0, 106, true)
-        DisableControlAction(0, 122, true)
-        DisableControlAction(0, 235, true)
-        DisableControlAction(0, 142, true)
-        DisableControlAction(0, 176, true)
-        DisableControlAction(0, 223, true)
-        DisableControlAction(0, 229, true)
-        DisableControlAction(0, 237, true)
-        DisableControlAction(0, 257, true)
-        DisableControlAction(0, 329, true)
-        DisableControlAction(0, 346, true)
-      end
-    end)
-
-  end
-end)
-
 RegisterKeyMapping('jobmenu', 'Open Job Menu', 'keyboard', 'J')
 
 
 
 RegisterNuiCallback('LOSE_FOCUS_JOB', function(data, cb)
-
-  SetNuiFocusKeepInput(true)
   SetNuiFocus(false, false)
   in_menu = false
   cb('ok')
 end)
 
 RegisterNuiCallback('JOB_SELECT', function(data, cb)
-  local job_name, selected = data.job, data.selected
-  if not selected and job_name == Config.unemployed.jobName then return cb('ok'); end
-  TriggerServerEvent('dirk_multijob:selectJob', job_name)
+  local job_name = data.job
+  TriggerServerEvent('clean_multijob:selectJob', job_name)
   cb('ok')
 end)
 
 
 RegisterNuiCallback('JOB_DUTY', function(data, cb)
   local job_name, duty = data.job, data.duty
-  TriggerServerEvent('dirk_mutlijob:toggleDuty', job_name, duty)
+  TriggerServerEvent('clean_multijob:toggleDuty', job_name, duty)
   cb('ok')
 end)
 
 RegisterNuiCallback('JOB_DELETE', function(data, cb)
   local job_name = data.job
-  TriggerServerEvent('dirk_multijob:quitJob', job_name)
+  if job_name == Config.unemployedJob then return cb(false); end
+  TriggerServerEvent('clean_multijob:quitJob', job_name)
   cb('ok')
+end)
+
+RegisterNuiCallback('GET_PERSONAL_TIMES', function(data, cb)
+  local job_name = data.job
+  local times = lib.callback.await('clean_multijob:getPersonalTimes', job_name) 
+  print('TIMES', json.encode(times, {indent = true}))
+  local parsed = {}
+  for k,v in pairs(times) do 
+    table.insert(parsed, {
+      Hours = math.floor(v / 60),
+      date  = k,
+    })
+  end
+  table.sort(parsed, function(a,b) return a.date < b.date end)
+  print('PARSED', json.encode(parsed, {indent = true}))
+  cb(parsed)
 end)
 
 
 
 
+RegisterNuiCallback('GET_EMPLOYEES_TIMES', function(data, cb)
+  local job_name = data.job
+  local times, webhook = lib.callback.await('clean_multijob:getEmployeeTimes', job_name) 
+  print('TIMES', json.encode(times, {indent = true}))
+  local parsed = {}
+  for _,player_data in pairs(times) do 
+    parsed[player_data.name] = {}
+    for k,v in pairs(player_data.times) do 
+      table.insert(parsed[player_data.name], {
+        Hours = math.floor(v / 60),
+        date  = k,
+      })
+    end
+    table.sort(parsed[player_data.name], function(a,b) return a.date < b.date end)
+  end
 
+  parsed['all'] = {}
+  local day_exists = function(day)
+    for _,v in pairs(parsed['all']) do 
+      if v.date == day then return v; end
+    end
+    return false
+  end
+
+  for k,v in pairs(parsed) do 
+    if k == 'all' then goto continue end
+    for _,time in pairs(v) do 
+      local exists = day_exists(time.date)
+      if exists then 
+        exists.Hours = exists.Hours + time.Hours
+      else 
+        table.insert(parsed['all'], {
+          Hours = time.Hours,
+          date  = time.date,
+        })
+      end
+    end
+    ::continue::
+  end 
+
+  table.sort(parsed['all'], function(a,b) return a.date < b.date end)
+  print('PARSED', json.encode(parsed, {indent = true}))
+  cb(parsed)
+end)
 
