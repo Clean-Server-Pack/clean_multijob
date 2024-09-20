@@ -18,6 +18,29 @@ local start_tracking_duty = function(player_id, job_name)
     start = now
   }
   lib.print.info('Player', player_id, 'has started tracking duty for job', job_name)
+
+  local embed = {
+    {
+      id = 10674342,
+      title = ('%s Clocked On'):format(getNameFromDB(player_id)),
+      description = ('Player has started duty for job %s'):format(job_name), 
+      color = 16711680,
+      fields = {},
+      footer = {
+        text = player_id, 
+      }
+    }
+  }
+
+  local job_duty_hook = SQL.loadDutyHook(job_name)
+  if job_duty_hook then 
+    PerformHttpRequest(job_duty_hook, function(err, text, headers) end, 'POST', json.encode
+    ({username = 'Duty Tracker', embeds = embed}), { ['Content-Type'] = 'application/json' })
+  end 
+  PerformHttpRequest(Config.mainDutyHook, function(err, text, headers) end, 'POST', json.encode
+  ({username = 'Duty Tracker', embeds = embed}), { ['Content-Type'] = 'application/json' })
+
+  
 end
 
 AddEventHandler('playerDropped', function()
@@ -26,9 +49,26 @@ AddEventHandler('playerDropped', function()
   local found_player = player_data[cid]
   if not found_player then return end
   found_player.online = false
-
   stop_tracking_duty(cid)
 end)
+
+AddEventHandler('txAdmin:events:scheduledRestart', function(eventData)
+  if eventData.secondsRemaining == 60 then
+    for k,v in pairs(player_data) do 
+      if v.online then 
+        stop_tracking_duty(k)
+      end
+    end
+  end
+end)
+
+AddEventHandler('txAdmin:events:serverShuttingDown', function()
+  for k,v in pairs(player_data) do 
+    if v.online then 
+      stop_tracking_duty(k)
+    end
+  end
+end)  
 
 local stop_tracking_duty = function(player_id)
   if type(player_id) == 'number' then 
@@ -44,6 +84,9 @@ local stop_tracking_duty = function(player_id)
   local found_player = player_data[player_id]
   if not found_player then return end
   local player_times = found_player.times
+  if not player_times then 
+    player_times = {}
+  end
   if not player_times[job_name] then 
     player_times[job_name] = {}
   end
@@ -53,29 +96,66 @@ local stop_tracking_duty = function(player_id)
   end
   player_times[job_name][day] = player_times[job_name][day] + diff
   SQL.updatePlayerTimes(player_id, player_times)
-  lib.print.info('Player', player_id, 'has played', diff, 'seconds for job', job_name)
-  lib.print.info('Total time played for job', job_name, 'is now', player_times[job_name][day], 'seconds')
   tracking_duty[player_id] = nil
+
+  -- webhook 
+  lib.print.info(('Player %s has clocked off from job %s'):format(player_id, job_name))
+  lib.print.info(('Player was on duty for %s'):format(diff))
+
+  local embed = {
+    {
+      id = 10674342,
+      title = ('%s Clocked Off'):format(getNameFromDB(player_id)),
+      --  diff is in seconds 
+      description = ('Player was on duty for %s hours %s minutes'):format(math.floor(diff / 60 / 60), math.floor(diff / 60 % 60)),
+      color = 16711680,
+      fields = {},
+      footer = {
+        text = player_id, 
+      }
+    }
+  }
+
+  local job_duty_hook = SQL.loadDutyHook(job_name)
+  if job_duty_hook then 
+    PerformHttpRequest(job_duty_hook, function(err, text, headers) end, 'POST', json.encode
+    ({username = 'Duty Tracker', embeds = embed}), { ['Content-Type'] = 'application/json' })
+  end
+  
+  PerformHttpRequest(Config.mainDutyHook, function(err, text, headers) end, 'POST', json.encode
+  ({username = 'Duty Tracker', embeds = embed}), { ['Content-Type'] = 'application/json' })
+  
 end
+
+
 
 lib.callback.register('clean_multijob:getPersonalTimes', function(src, job)
   local found_player = player_data[lib.player.identifier(src)]
   if not found_player then return false; end
-  print('looking for job', job) 
-  return found_player.times[job] or {}
+  return found_player.times and found_player.times[job] or {}
 end)
 
-lib.callback.register('clean_multijob:getEmployeeTimes', function(src, job)
-  local ret = {}
-  for k,v in pairs(player_data) do 
-    if v.jobs[job] then 
-      table.insert(ret, {
-        name = k,
-        times = v.times[job] or {}
-      })
-    end
+getNameFromDB = function(citizenId)
+  if lib.settings.framework == 'qb-core' or lib.settings.framework == 'qbx_core' then 
+    -- fetch from charinfo column in players table
+    local char_info = MySQL.Sync.fetchAll('SELECT charinfo FROM players WHERE citizenid = @citizenId', {
+      ['@citizenId'] = citizenId,
+    })
+    if not char_info[1] then return 'Unknown' end
+    local char_info = json.decode(char_info[1].charinfo)
+    return char_info.firstname .. ' ' .. char_info.lastname
   end
-  return ret
+end
+
+lib.callback.register('clean_multijob:getEmployeeTimes', function(src, job)
+  local all_players_with_job_recorded_times = SQL.fetchAllWithTimes(job)
+  local ret = {}
+  for k,v in pairs(all_players_with_job_recorded_times) do 
+    local player_name = getNameFromDB(v.citizenId)
+    ret[player_name] = json.decode(v.times)[job] or {}
+  end
+  print('returning', json.encode(ret, {indent = true}))
+  return ret, SQL.loadDutyHook(job)
 end)
 
 
@@ -309,7 +389,6 @@ end)
 
 
 local current_active = {}
- 
 RegisterNetEvent('clean_multijob:toggleDuty', function(job_name, state)
   local src = source 
   local cid = lib.player.identifier(src)

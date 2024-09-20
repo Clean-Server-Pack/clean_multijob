@@ -13,6 +13,7 @@ return {
   jobCounts          = true, --\\ Should the script track how many players are in each job?
 
   regularSlots = 2, --\\ How many jobs in total can a regular player have at once?
+  mainDutyHook = 'https://discord.com/api/webhooks/1286485174829453322/BYaJDrCfSdwTw5X4kYw7CckA8cKxj5lKc0n1B9SeoVCOiR9oY5h6YBUQVUPW3Riz-iAc', --\\ The webhook that will be called when a player goes on/off duty 
 
   usingDiscordRoles = false, --\\ If you want to use discord roles to determine job slots, set this to true
   roles = { --\\ Requires 

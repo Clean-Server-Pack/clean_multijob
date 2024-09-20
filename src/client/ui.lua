@@ -7,7 +7,6 @@ lib.onCache('playerLoaded', function(loaded)
 end)
 
 lib.onCache('job', function(job)
-  print('NEW JOB', json.encode(job, {indent = true}))
   TriggerServerEvent('clean_multijob:jobUpdate', {
     name = job.name,
     rank = job.grade,
@@ -37,7 +36,6 @@ end
 local in_menu = false 
 local last_call = GetGameTimer() - Config.spamPrevention * 1000
 openMenu = function()
-  print('OPEN MENU')
   if Config.spamPrevention then 
     if GetGameTimer() - last_call < Config.spamPrevention * 1000 then 
       return lib.notify({
@@ -50,9 +48,6 @@ openMenu = function()
   local current_job = cache.job
   local my_jobs, max_jobs = lib.callback.await('clean_multijob:getJobs', current_job.name)
   local job_display = {}
-  print('cur job')
-  print(json.encode(current_job, {indent = true}))
-
   if not my_jobs[current_job.name] then 
     my_jobs[current_job.name] = {
       rank = current_job.rank,
@@ -160,7 +155,6 @@ end)
 RegisterNuiCallback('GET_PERSONAL_TIMES', function(data, cb)
   local job_name = data.job
   local times = lib.callback.await('clean_multijob:getPersonalTimes', job_name) 
-  print('TIMES', json.encode(times, {indent = true}))
   local parsed = {}
   for k,v in pairs(times) do 
     table.insert(parsed, {
@@ -169,7 +163,6 @@ RegisterNuiCallback('GET_PERSONAL_TIMES', function(data, cb)
     })
   end
   table.sort(parsed, function(a,b) return a.date < b.date end)
-  print('PARSED', json.encode(parsed, {indent = true}))
   cb(parsed)
 end)
 
@@ -180,44 +173,63 @@ RegisterNuiCallback('GET_EMPLOYEES_TIMES', function(data, cb)
   local job_name = data.job
   local times, webhook = lib.callback.await('clean_multijob:getEmployeeTimes', job_name) 
   print('TIMES', json.encode(times, {indent = true}))
-  local parsed = {}
-  for _,player_data in pairs(times) do 
-    parsed[player_data.name] = {}
-    for k,v in pairs(player_data.times) do 
-      table.insert(parsed[player_data.name], {
-        Hours = math.floor(v / 60),
-        date  = k,
-      })
-    end
-    table.sort(parsed[player_data.name], function(a,b) return a.date < b.date end)
-  end
-
-  parsed['all'] = {}
+  times['ALL'] = {}
   local day_exists = function(day)
-    for _,v in pairs(parsed['all']) do 
+    for _,v in pairs(times['ALL']) do 
       if v.date == day then return v; end
     end
     return false
   end
 
-  for k,v in pairs(parsed) do 
-    if k == 'all' then goto continue end
-    for _,time in pairs(v) do 
-      local exists = day_exists(time.date)
-      if exists then 
-        exists.Hours = exists.Hours + time.Hours
-      else 
-        table.insert(parsed['all'], {
-          Hours = time.Hours,
-          date  = time.date,
-        })
-      end
+  for player_name, player_times in pairs(times) do 
+    for date, seconds in pairs(player_times) do 
+      table.insert(times[player_name], {
+        date = date,
+        Hours = math.floor(seconds / 60)
+      })
+      player_times[date] = nil 
+    end 
+    table.sort(times[player_name], function(a,b) return a.date < b.date end)
+  end 
+
+  for player_name,player_times in pairs(times) do 
+    print('player_name', player_name)
+    print('player_times', json.encode(player_times, {indent = true}))
+    if player_name == 'ALL' then 
+      goto continue
+    end
+    for _, data in pairs(player_times) do 
+      if data then 
+        local date_exists = day_exists(data.date)
+        if not date_exists then 
+          table.insert(times['ALL'], {
+            date = data.date,
+            Hours = data.Hours,
+          })
+        else 
+          date_exists.Hours = date_exists.Hours + data.Hours
+        end 
+      end 
+
     end
     ::continue::
   end 
 
-  table.sort(parsed['all'], function(a,b) return a.date < b.date end)
-  print('PARSED', json.encode(parsed, {indent = true}))
-  cb(parsed)
+  
+  
+  table.sort(times['ALL'], function(a,b) return a.date < b.date end)
+  -- Force ALL to be first
+  table.insert(times, 1, table.remove(times, #times)) 
+
+  cb({
+    times = times, 
+    webhook = webhook,
+  })
+end)
+
+RegisterNuiCallback('SAVE_NEW_WEBHOOK', function(data, cb)
+  local job_name, webhook = data.job, data.webhook
+  lib.callback.await('clean_multijob:updateJobHook', job_name, webhook)
+  cb('ok')
 end)
 

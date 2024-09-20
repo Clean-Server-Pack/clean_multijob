@@ -6,15 +6,31 @@ SQL = {
     MySQL.Async.execute('CREATE TABLE IF NOT EXISTS duty_webhooks (job_name VARCHAR(50), webhook VARCHAR(255))', {})
   end,
 
-  loadDutyHook = function()
-    return MySQL.Sync.fetchAll('SELECT * FROM duty_webhooks', {})
+  loadDutyHook = function(job_name) 
+    local data = MySQL.Sync.fetchAll('SELECT webhook FROM duty_webhooks WHERE job_name = @job_name', {
+      ['@job_name'] = job_name,
+    })
+    if not data[1] then return false; end
+    print('returning webhook', data[1].webhook)
+    return data[1].webhook
   end,
 
   updateDutyHook = function(job_name, webhook)
-    MySQL.Async.execute('INSERT INTO duty_webhooks (job_name, webhook) VALUES (@job_name, @webhook) ON DUPLICATE KEY UPDATE webhook = @webhook', {
+    -- if not exists, insert else update
+    local data = MySQL.Sync.fetchAll('SELECT * FROM duty_webhooks WHERE job_name = @job_name', {
       ['@job_name'] = job_name,
-      ['@webhook'] = webhook,
     })
+    if not data[1] then 
+      MySQL.Async.execute('INSERT INTO duty_webhooks (job_name, webhook) VALUES (@job_name, @webhook)', {
+        ['@job_name'] = job_name,
+        ['@webhook'] = webhook,
+      })
+    else 
+      MySQL.Async.execute('UPDATE duty_webhooks SET webhook = @webhook WHERE job_name = @job_name', {
+        ['@job_name'] = job_name,
+        ['@webhook'] = webhook,
+      })
+    end
   end,
 
   loadPlayerData = function(player)
@@ -63,11 +79,22 @@ SQL = {
   updatePlayerJobs = function(player, jobs)
     if type(player) == 'number' then player = lib.player.identifier(player) end
     -- update player jobs
-    print('sQL NEW JOBS', json.encode(jobs, {indent = true}))
     MySQL.Async.execute('UPDATE multijob SET jobs = @jobs WHERE citizenId = @citizenId', {
       ['@citizenId'] = player,
       ['@jobs'] = json.encode(jobs),
     })
+  end,
+
+  fetchAllWithTimes = function(job_name)
+    return MySQL.Sync.fetchAll('SELECT * FROM multijob WHERE times LIKE @job_name', {
+      ['@job_name'] = '%'..job_name..'%',
+    })
+  end,
+
+  fetchAllWithJob = function(job_name)
+    return MySQL.Sync.fetchAll('SELECT * FROM multijob WHERE jobs LIKE @job_name', {
+      ['@job_name'] = '%'..job_name..'%',
+    })  
   end,
 
 
@@ -86,9 +113,7 @@ lib.callback.register('clean_multijob:updateJobHook', function(src, job_name, we
   return true
 end)
 
-lib.callback.register('clean_multijob:getJobHook', function(src)
-  return SQL.loadDutyHook()
-end)
+
 
 CreateThread(function()
   SQL.ensureTable()

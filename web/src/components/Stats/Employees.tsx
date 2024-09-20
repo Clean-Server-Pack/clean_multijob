@@ -7,7 +7,7 @@ import HoverIcon from "../General/HoverIcon";
 import { fetchNui } from "../../utils/fetchNui";
 
 type EmployeesList = {
-  [key: string]: {name?: string, data: {Hours: number, date: string}[]}
+  [key: string]: {Hours: number, date: string}[]
 }
 
 export default function Employees(props: {selected: boolean}) {
@@ -20,74 +20,20 @@ export default function Employees(props: {selected: boolean}) {
 
 
   useEffect(() => {
-    //  fetch employees for selected job
-    // return sample data for now
-    fetchNui('GET_EMPLOYEES_TIMES', {job: selectedJob}).then((data) => {
-      setEmployeeData(data as unknown as typeof employeeData)
-    })
-    setWebhook('https://webhook.site/1b3b3b3b-1b3b-1b3b-1b3b-1b3b3b3b3b3b')
-    setEmployeeData({
-      all: {
-        name: 'All',
-        data: [
-          {
-            Hours: 0,
-            date: '1/7',
-          },
-          {
-            Hours: 2,
-            date: '1/14',
-          },
-          {
-            Hours: 3,
-            date: '1/21',
-          },
-          {
-            Hours: 4,
-            date: '1/28',
-          },
-          {
-            Hours: 4,
-            date: '1/28',
-          },
-          {
-            Hours: 4,
-            date: '1/28',
-          },
-        ]
-      },
+    const fetchData = async () => {
+      //  fetch employees for selected job
+      // return sample data for now
+      if (!props.selected) return;
+      const data = await fetchNui<{
+        times: EmployeesList
+        webhook: string
+      }>('GET_EMPLOYEES_TIMES', {job: selectedJob});
+      setEmployeeData(data.times);
+      setWebhook(data.webhook);
+    };
 
-      HDX1232: {
-        name: 'Billy Joel',
-        data: [
-          {
-            Hours: 4,
-            date: '1/7',
-          },
-          {
-            Hours: 3,
-            date: '1/14',
-          },
-          {
-            Hours: 6,
-            date: '1/21',
-          },
-          {
-            Hours: 3,
-            date: '1/28',
-          },
-          {
-            Hours: 5,
-            date: '1/28',
-          },
-          {
-            Hours: 9,
-            date: '1/28',
-          },
-        ]
-      }
-    })
-  }, [selectedJob])
+    fetchData();
+  }, [selectedJob, props.selected])
 
 
   useEffect(() => {
@@ -154,21 +100,21 @@ export default function Employees(props: {selected: boolean}) {
             gap='sm'
           >
             {/* Map employeeData and  */}
-            {Object.keys(employeeData).map((employee) => {
+            {Object.entries(employeeData).map(([key]) => {
               return (
                 <Flex
                   bg='rgba(77,77,77,0.6)'
                   p='md'
-                  onClick={() => setSelectedEmployee(employee)}
+                  onClick={() => setSelectedEmployee(key)}
                   style={{
                     borderRadius:theme.radius.sm,
-                    border: employee === selectedEmployee ? `2px solid ${theme.colors[theme.primaryColor][9]}` : '2px solid rgba(77,77,77,0.6)',
+                    border: key === selectedEmployee ? `2px solid ${theme.colors[theme.primaryColor][9]}` : '2px solid rgba(77,77,77,0.6)',
                     cursor: 'pointer',
                   }}
                 >
                   <Text
                     size='2vh'
-                  >{employeeData[employee].name}</Text>
+                  >{key}</Text>
                 </Flex>
               )
             })}
@@ -186,11 +132,12 @@ export default function Employees(props: {selected: boolean}) {
               <Input flex={1}
                 placeholder={webhook}
                 value={webhook}
+                onChange={(e) => setWebhook(e.currentTarget.value)}
               />
               <HoverIcon 
                 icon='floppy-disk'
                 onClick={() => {
-                  console.log('copy')
+                  fetchNui('SAVE_NEW_WEBHOOK', {job: selectedJob, webhook: webhook})
                 }}
 
               />
@@ -205,7 +152,7 @@ export default function Employees(props: {selected: boolean}) {
           h='95%'
           flex={1}
           strokeWidth={3}
-          data={employeeData[selectedEmployee as keyof typeof employeeData].data}
+          data={employeeData[selectedEmployee as keyof typeof employeeData]}
           dataKey="date"
           series={[
             { name: 'Hours', color: 'indigo.6' },
