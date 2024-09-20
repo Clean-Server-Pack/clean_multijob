@@ -7,6 +7,7 @@ lib.onCache('playerLoaded', function(loaded)
 end)
 
 lib.onCache('job', function(job)
+  if not job then return; end
   TriggerServerEvent('clean_multijob:jobUpdate', {
     name = job.name,
     rank = job.grade,
@@ -25,11 +26,16 @@ end)
 
 getJobInfo = function(job_name, job_rank)
   local raw = lib.FW.Shared.Jobs[job_name]
+  if not raw then 
+    lib.print.info('Cannot find job info for ', job_name)
+    return false
+  end
+  job_rank = lib.settings.framework == 'qbx_core' and tonumber(job_rank) or tostring(job_rank)
   return {
     label      = raw.label,
-    rank_label = raw.grades[tonumber(job_rank)].name,
-    isboss     = raw.grades[tonumber(job_rank)].isboss,
-    salary     = raw.grades[tonumber(job_rank)].payment,
+    rank_label = raw.grades[job_rank].name,
+    isboss     = raw.grades[job_rank].isboss,
+    salary     = raw.grades[job_rank].payment,
   }
 end
 
@@ -62,18 +68,20 @@ openMenu = function()
   for k,v in pairs(my_jobs) do 
     local on_duty = current_job.name == k and current_job.duty or false
     local job_info = getJobInfo(k, v.rank)
-    table.insert(inserted, k)
-    table.insert(job_display, {
-      name  = k, 
-      label = job_info.label or v.label, 
-      rank  = v.rank,
-      isboss = job_info.isboss,
-      selected = current_job.name == k,
-      rank_label = job_info.rank_label,
-      duty = current_job.name == k and current_job.onduty or false,
-      active = v.active,
-      salary = job_info.salary,
-    })
+    if job_info then 
+      table.insert(inserted, k)
+      table.insert(job_display, {
+        name  = k, 
+        label = job_info.label or v.label, 
+        rank  = v.rank,
+        isboss = job_info.isboss,
+        selected = current_job.name == k,
+        rank_label = job_info.rank_label,
+        duty = current_job.name == k and current_job.onduty or false,
+        active = v.active,
+        salary = job_info.salary,
+      })
+    end 
   end
 
 
@@ -123,8 +131,6 @@ end, false)
 
 
 RegisterKeyMapping('jobmenu', 'Open Job Menu', 'keyboard', 'J')
-
-
 
 RegisterNuiCallback('LOSE_FOCUS_JOB', function(data, cb)
   SetNuiFocus(false, false)
