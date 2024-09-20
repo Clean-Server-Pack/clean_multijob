@@ -172,7 +172,6 @@ end)
 RegisterNuiCallback('GET_EMPLOYEES_TIMES', function(data, cb)
   local job_name = data.job
   local times, webhook = lib.callback.await('clean_multijob:getEmployeeTimes', job_name) 
-  print('TIMES', json.encode(times, {indent = true}))
   times['ALL'] = {}
   local day_exists = function(day)
     for _,v in pairs(times['ALL']) do 
@@ -193,8 +192,6 @@ RegisterNuiCallback('GET_EMPLOYEES_TIMES', function(data, cb)
   end 
 
   for player_name,player_times in pairs(times) do 
-    print('player_name', player_name)
-    print('player_times', json.encode(player_times, {indent = true}))
     if player_name == 'ALL' then 
       goto continue
     end

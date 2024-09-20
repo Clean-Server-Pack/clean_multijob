@@ -17,7 +17,6 @@ local start_tracking_duty = function(player_id, job_name)
     job = job_name,
     start = now
   }
-  lib.print.info('Player', player_id, 'has started tracking duty for job', job_name)
 
   local embed = {
     {
@@ -99,8 +98,6 @@ local stop_tracking_duty = function(player_id)
   tracking_duty[player_id] = nil
 
   -- webhook 
-  lib.print.info(('Player %s has clocked off from job %s'):format(player_id, job_name))
-  lib.print.info(('Player was on duty for %s'):format(diff))
 
   local embed = {
     {
@@ -154,7 +151,6 @@ lib.callback.register('clean_multijob:getEmployeeTimes', function(src, job)
     local player_name = getNameFromDB(v.citizenId)
     ret[player_name] = json.decode(v.times)[job] or {}
   end
-  print('returning', json.encode(ret, {indent = true}))
   return ret, SQL.loadDutyHook(job)
 end)
 

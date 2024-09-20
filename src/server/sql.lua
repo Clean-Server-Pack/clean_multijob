@@ -11,7 +11,6 @@ SQL = {
       ['@job_name'] = job_name,
     })
     if not data[1] then return false; end
-    print('returning webhook', data[1].webhook)
     return data[1].webhook
   end,
 
