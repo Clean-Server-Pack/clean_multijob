@@ -42,32 +42,7 @@ local start_tracking_duty = function(player_id, job_name)
   
 end
 
-AddEventHandler('playerDropped', function()
-  local src = source
-  local cid = lib.player.identifier(src)
-  local found_player = player_data[cid]
-  if not found_player then return end
-  found_player.online = false
-  stop_tracking_duty(cid)
-end)
 
-AddEventHandler('txAdmin:events:scheduledRestart', function(eventData)
-  if eventData.secondsRemaining == 60 then
-    for k,v in pairs(player_data) do 
-      if v.online then 
-        stop_tracking_duty(k)
-      end
-    end
-  end
-end)
-
-AddEventHandler('txAdmin:events:serverShuttingDown', function()
-  for k,v in pairs(player_data) do 
-    if v.online then 
-      stop_tracking_duty(k)
-    end
-  end
-end)  
 
 local stop_tracking_duty = function(player_id)
   if type(player_id) == 'number' then 
@@ -124,7 +99,32 @@ local stop_tracking_duty = function(player_id)
   
 end
 
+AddEventHandler('playerDropped', function()
+  local src = source
+  local cid = lib.player.identifier(src)
+  local found_player = player_data[cid]
+  if not found_player then return end
+  found_player.online = false
+  stop_tracking_duty(cid)
+end)
 
+AddEventHandler('txAdmin:events:scheduledRestart', function(eventData)
+  if eventData.secondsRemaining == 60 then
+    for k,v in pairs(player_data) do 
+      if v.online then 
+        stop_tracking_duty(k)
+      end
+    end
+  end
+end)
+
+AddEventHandler('txAdmin:events:serverShuttingDown', function()
+  for k,v in pairs(player_data) do 
+    if v.online then 
+      stop_tracking_duty(k)
+    end
+  end
+end)  
 
 lib.callback.register('clean_multijob:getPersonalTimes', function(src, job)
   local found_player = player_data[lib.player.identifier(src)]
