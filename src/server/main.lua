@@ -195,28 +195,6 @@ local loadPlayer = function(id)
   local is_online = checkOnline(id)
   found_player.online = is_online
   player_data[id] = found_player
-
-  if Config.convertFromOldJSON then 
-    if not json_file then 
-      local loaded_file = LoadResourceFile(GetCurrentResourceName(), 'player_data.json')
-      if loaded_file then 
-        json_file = json.decode(loaded_file)
-      end
-    end 
-    if not json_file then 
-      lib.print.error('No JSON file found for converting from old JSON')
-      goto end_convert
-    end 
-    if not json_file[id] then 
-      goto end_convert      
-    end
-
-    for job_name, job_rank in pairs(json_file[id]) do 
-      addJob(id, job_name, job_rank)
-    end
-  end   
-  ::end_convert::
-
   return found_player
 end 
 

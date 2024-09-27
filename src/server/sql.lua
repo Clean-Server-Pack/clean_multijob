@@ -117,7 +117,17 @@ end)
 CreateThread(function()
   SQL.ensureTable()
 
-  
+  if Config.convertFromOldJSON then 
+    local loaded_file = LoadResourceFile(GetCurrentResourceName(), 'multi_jobs.json')
+    if loaded_file then 
+      json_file = json.decode(loaded_file)
+      for citizenId, jobs in pairs(json_file) do 
+        SQL.ensurePlayer(citizenId, jobs, {})
+      end
+    end
+  end 
+
+
   if Config.convertFromPS then 
     local old_jobs = MySQL.query.await("SELECT citizenid, jobdata FROM multijobs", {})
     if not old_jobs then 

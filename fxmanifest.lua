@@ -11,7 +11,6 @@ shared_script{
 }
 
 client_script { 
-  'src/client/main.lua', 
   'src/client/ui.lua', 
 } 
 
