@@ -7,7 +7,7 @@ return {
   spamPrevention = 2, --\\ How many seconds between each menu open to stop spamming?
   setUnemployedStart = true, --\\ Should the player start as unemployed?
   unemployedJob = 'unemployed', --\\ What should the unemployed job be called?
-
+  adminAce      = 'admin', --\\ The ace permission required to access all jobs statistics
 
   enableTimeTracking = true, --\\ Should the script track time played for each job? (happens only when they go on duty)
   jobCounts          = true, --\\ Should the script track how many players are in each job?

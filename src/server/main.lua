@@ -126,6 +126,19 @@ AddEventHandler('txAdmin:events:serverShuttingDown', function()
   end
 end)  
 
+lib.callback.register('clean_multijob:isAdmin', function(src)
+  
+  -- check ace perm of player 
+  local all_jobs = {}
+  local raw_jobs = lib.FW.Shared.Jobs 
+
+  for k,v in pairs(raw_jobs) do 
+    table.insert(all_jobs, v.name)
+  end
+  
+  return IsPlayerAceAllowed(src, Config.adminAce), all_jobs
+end)
+
 lib.callback.register('clean_multijob:getPersonalTimes', function(src, job)
   local found_player = player_data[lib.player.identifier(src)]
   if not found_player then return false; end
@@ -331,9 +344,6 @@ RegisterNetEvent('clean_multijob:jobUpdate', function(job)
   addJob(src, job.name, job.rank)
 end)
 
-
-
-
 RegisterNetEvent('clean_multijob:playerJoined', function()
   local src = source
   if not Config.setUnemployedStart then return end
@@ -375,6 +385,8 @@ RegisterNetEvent('clean_multijob:selectJob', function(job_name)
   local player_jobs = found_player.jobs
   if not player_jobs[job_name] and job_name ~= Config.unemployedJob then return print('Player does not have this job'); end
   lib.player.setJob(src, job_name, player_jobs[job_name])
+  Wait(100)
+  lib.player.setDuty(src, false)
 end)
 
 RegisterNetEvent('clean_multijob:quitJob', function(job_name)

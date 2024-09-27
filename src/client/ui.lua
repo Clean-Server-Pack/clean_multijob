@@ -36,6 +36,7 @@ end
 local in_menu = false 
 local last_call = GetGameTimer() - Config.spamPrevention * 1000
 openMenu = function()
+  print('ONDUTy?' , cache.job.onduty)
   if Config.spamPrevention then 
     if GetGameTimer() - last_call < Config.spamPrevention * 1000 then 
       return lib.notify({
@@ -87,10 +88,11 @@ openMenu = function()
       selected = current_job.name == Config.unemployedJob,
       rank_label = job_info.rank_label,
       duty = false,
-      active = 0,
+      active = false,
       salary = 0,
     })
   end
+  -- print('JOB DISPLAY', json.encode(job_display, {indent = true}))
 
   SetNuiFocus(true, true)
   in_menu = true
@@ -230,3 +232,6 @@ RegisterNuiCallback('SAVE_NEW_WEBHOOK', function(data, cb)
   cb('ok')
 end)
 
+RegisterNuiCallback('IS_ADMIN', function(data, cb)
+  cb(lib.callback.await('clean_multijob:isAdmin'))
+end)

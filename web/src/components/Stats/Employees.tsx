@@ -17,6 +17,10 @@ export default function Employees(props: {selected: boolean}) {
   const [employeeData, setEmployeeData] = useState<EmployeesList>({});
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [webhook, setWebhook] = useState('');
+ 
+
+ 
+
 
 
   useEffect(() => {
@@ -46,6 +50,17 @@ export default function Employees(props: {selected: boolean}) {
     })
   }, [myData.jobs])
 
+
+  // const getAllJobs = () => {
+  //   const res, err = funcs.isAdmin();
+  //   if (err) return;
+  //   if (res) {
+  //     return fetchNui<{jobs: string[]}>('GET_ALL_JOBS');
+  //   }else {
+  //     return myData.jobs;
+  //   } 
+  // }
+
   return props.selected && (
     <Flex
       direction='column'
@@ -62,6 +77,7 @@ export default function Employees(props: {selected: boolean}) {
         <Flex
           gap='xs'
         >
+
           {myData.jobs.map((job) => {
             if (!job.isboss) return null;
             return (
@@ -82,6 +98,7 @@ export default function Employees(props: {selected: boolean}) {
             )
 
           })}
+      
 
         </Flex>
       </Flex>

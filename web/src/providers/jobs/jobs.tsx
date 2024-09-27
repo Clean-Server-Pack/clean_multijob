@@ -30,7 +30,7 @@ type JobFuncsProps = {
   setDuty: (job: string, duty: boolean) => void
   getBossJobs: () => JobProps[]
   deleteJob: (job: string) => void
-  
+  isAdmin: () => Promise<boolean>
 
 
 }
@@ -141,6 +141,12 @@ export const JobProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       })
     }, 
 
+    isAdmin: async () => {
+      // check if player is admin
+      const isAdmin = await fetchNui<boolean>('IS_ADMIN', {})
+      return isAdmin
+    },  
+
     getBossJobs: () => {
       const jobs = myData.jobs.filter((job) => job.isboss)
       return jobs 
@@ -184,6 +190,7 @@ export const JobProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (selectedJob) {
         selectedJob.selected = true
+        selectedJob.duty = false
         selectedJob.active += 1
       }
 
