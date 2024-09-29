@@ -18,6 +18,7 @@ RegisterNuiCallback('GET_SETTINGS', function(data, cb)
   cb({
     primaryColor       = lib.settings.primaryColor,
     primaryShade       = lib.settings.primaryShade,
+    customTheme        = lib.settings.customTheme,
     enableTimeTracking = Config.enableTimeTracking,
     jobCounts          = Config.jobCounts,
     unemployedJob      = Config.unemployedJob,
