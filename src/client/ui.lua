@@ -3,6 +3,7 @@ local Config = require 'config'
 
 lib.onCache('playerLoaded', function(loaded)
   if not loaded then return; end
+  
   TriggerServerEvent('clean_multijob:playerJoined')
 end)
 
