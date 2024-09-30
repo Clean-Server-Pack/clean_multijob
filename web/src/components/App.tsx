@@ -19,13 +19,19 @@ const App: React.FC = () => {
       ...theme, // Start with the existing theme object
       colors: {
         ...theme.colors, // Copy the existing colors
-        custom: settings.customTheme || theme.colors?.custom
+        custom: settings.customTheme
       },
+    };
+    
+    setCurTheme(updatedTheme);
+
+    // set primary color
+    setCurTheme({
+      ...updatedTheme,
       primaryColor: settings.primaryColor,
       primaryShade: settings.primaryShade,
-    };
+    });
 
-    setCurTheme(updatedTheme);
   }, [settings]);
   
   return (
