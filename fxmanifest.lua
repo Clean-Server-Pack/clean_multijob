@@ -23,6 +23,10 @@ server_script {
  
 ui_page 'web/build/index.html'
 
+dependencies {
+  'clean_lib'	
+}
+
 files {
   'config.lua',
   'web/build/index.html',
